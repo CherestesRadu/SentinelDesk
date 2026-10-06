@@ -165,6 +165,7 @@ a { text-decoration: none; color: inherit; }
 .log-list li svg { width: 22px; height: 22px; color: var(--blue-dark); }
 .log-list li .ok { color: var(--blue); }
 .log-list li .warn { color: var(--warn); }
+.log-empty { display: block !important; padding: 14px 0; color: var(--muted); }
 
 .panel-card {
   padding: 24px;

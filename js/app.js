@@ -79,35 +79,56 @@ if (powerButton) {
   powerButton.addEventListener('click', () => toast('System wird beendet'));
 }
 
-async function demoSequence() {
-  await wait(1200);
-  const badge = document.querySelector('.status-badge');
-  if (badge) {
-    badge.classList.add('spin');
+function auditIcon(level) {
+  if (level === 'warn') {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" class="warn"><path d="M12 4 21 20H3L12 4Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>';
   }
-  toast('Diagnose wird ausgeführt');
-  await wait(2000);
-  if (badge) {
-    badge.classList.remove('spin');
-  }
-  const statusCard = document.querySelector('.status-card');
-  if (statusCard) {
-    statusCard.classList.remove('ok');
-    statusCard.classList.add('warn');
-    statusCard.querySelector('h2').textContent = 'Hinweise gefunden';
-    statusCard.querySelector('p').innerHTML = 'Treiber-Update verfügbar.<br />Reparatur kann gestartet werden.';
-  }
-  const pills = document.querySelectorAll('.pill');
-  pills.forEach((pill, index) => {
-    if (index === 1) {
-      pill.className = 'pill warn';
-      pill.textContent = 'warn';
+  return '<svg viewBox="0 0 24 24" aria-hidden="true" class="ok"><path d="M5 12.5 9 16l10-10" /></svg>';
+}
+
+function renderAuditLog(entries) {
+  document.querySelectorAll('[data-audit-list]').forEach(list => {
+    list.replaceChildren();
+    if (!entries.length) {
+      list.innerHTML = '<li class="log-empty">Keine Audit-Einträge vorhanden.</li>';
+      return;
     }
+    entries.forEach(entry => {
+      const item = document.createElement('li');
+      item.innerHTML = `${auditIcon(entry.level)}<span>${entry.time}</span><span class="pill ${entry.level}">${entry.level}</span><span>${entry.message}</span>`;
+      list.appendChild(item);
+    });
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', demoSequence);
-} else {
-  demoSequence();
+async function loadAuditLog() {
+  try {
+    const response = await fetch('./api/audit.php');
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Audit log unavailable');
+    renderAuditLog(data.entries);
+  } catch (error) {
+    document.querySelectorAll('[data-audit-list]').forEach(list => {
+      list.innerHTML = '<li class="log-empty">Audit-Log konnte nicht geladen werden.</li>';
+    });
+    console.error(error);
+  }
 }
+
+loadAuditLog();
+
+async function getHostname() {
+  const response = await fetch('api/run.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      module: 'hostname'
+    })
+  });
+
+  console.log(response.json());
+}
+
+console.log(getHostname())

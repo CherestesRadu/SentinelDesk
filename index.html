@@ -65,7 +65,7 @@
         </button>
       </nav>
 
-      <p class="sidebar-foot">Vorschau · Demo-Daten</p>
+      <p class="sidebar-foot">Live · Audit-Daten</p>
     </aside>
 
     <main class="main">
@@ -148,33 +148,8 @@
                   <path d="m9 6 6 6-6 6" />
                 </svg></a>
             </div>
-            <ul class="log-list">
-              <li>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="ok">
-                  <path d="M5 12.5 9 16l10-10" />
-                </svg>
-                <span>08:40</span>
-                <span class="pill ok">ok</span>
-                <span>Systemprüfung gestartet</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="warn">
-                  <path d="M12 4 21 20H3L12 4Z" />
-                  <path d="M12 9v4" />
-                  <path d="M12 17h.01" />
-                </svg>
-                <span>08:42</span>
-                <span class="pill warn">warn</span>
-                <span>Treiber-Update verfügbar</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="ok">
-                  <path d="M5 12.5 9 16l10-10" />
-                </svg>
-                <span>08:44</span>
-                <span class="pill ok">ok</span>
-                <span>Netzwerkstatus normal</span>
-              </li>
+            <ul class="log-list" data-audit-list>
+              <li class="log-empty">Audit-Log wird geladen...</li>
             </ul>
           </div>
         </div>
@@ -200,6 +175,23 @@
                 <div class="progress-ring">72%</div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view="audit">
+        <div class="content">
+          <div class="card log-card">
+            <div class="log-head">
+              <svg viewBox="0 0 24 24" class="log-icon" aria-hidden="true">
+                <path d="M7 4h10l3 3v13H4V4h3Z" />
+                <path d="M8 9h8M8 13h8M8 17h5" />
+              </svg>
+              <h3>Verlauf / Audit-Log</h3>
+            </div>
+            <ul class="log-list" data-audit-list>
+              <li class="log-empty">Audit-Log wird geladen...</li>
+            </ul>
           </div>
         </div>
       </section>
