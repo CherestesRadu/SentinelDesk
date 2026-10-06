@@ -156,7 +156,7 @@ a { text-decoration: none; color: inherit; }
 .log-list { list-style: none; margin: 0; padding: 0; }
 .log-list li {
   display: grid;
-  grid-template-columns: 36px 110px 70px 1fr;
+  grid-template-columns: 36px 145px 70px 1fr;
   align-items: center;
   min-height: 42px;
   border-top: 1px solid var(--blue-line);
@@ -246,5 +246,5 @@ a { text-decoration: none; color: inherit; }
   .terminal { flex-direction: column; }
   .sidebar { width: 100%; border-right: 0; border-bottom: 2px solid var(--blue-line); }
   .action-grid { grid-template-columns: 1fr; }
-  .log-list li { grid-template-columns: 32px 90px 60px 1fr; }
+  .log-list li { grid-template-columns: 32px 145px 60px 1fr; }
 }

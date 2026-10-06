@@ -21,10 +21,10 @@ $entries = [];
 $lines = preg_split('/\r\n|\r|\n/', trim($contents));
 
 foreach ($lines as $line) {
-    if (preg_match('/^\[\s*(\d{2}:\d{2}:\d{2})\s*\]:\s*(.+)$/u', trim($line), $matches)) {
+    if (preg_match('/^\[\s*((?:\d{2}\.\d{2}\.\d{4}\s+)?\d{2}:\d{2}:\d{2})\s*\]:\s*(.+)$/u', trim($line), $matches)) {
         $message = trim($matches[2]);
         $entries[] = [
-            'time' => $matches[1],
+            'time' => preg_replace('/\s+/', ' ', $matches[1]),
             'level' => preg_match('/warn|error|fail/i', $message) ? 'warn' : 'ok',
             'message' => $message
         ];

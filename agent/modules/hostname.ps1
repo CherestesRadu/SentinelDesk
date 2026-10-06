@@ -1,5 +1,5 @@
 $hostname = $env:COMPUTERNAME
-$date = (Get-Date).ToString('[ dd:MM:yy ]:')
+$date = (Get-Date).ToString('[ dd.MM.yyyy HH:mm:ss ]:')
 
 $log_output = $date + ' hostname requested.'
 

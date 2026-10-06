@@ -41,5 +41,62 @@ def run_module():
 
     return result.stdout
 
+@app.route("/audit")
+def audit():
+    log_path = os.path.join("agent", "logs", "audit.log")
+
+    if not os.path.isfile(log_path):
+        return {
+            "success": True,
+            "entries": []
+        }
+
+    try:
+        with open(log_path, "rb") as file:
+            raw = file.read()
+
+        if raw.startswith(b"\xff\xfe"):
+            contents = raw[2:].decode("utf-16-le")
+        else:
+            contents = raw.decode("utf-8")
+
+        lines = contents.splitlines()
+
+        entries = []
+
+        for line in lines:
+            line = line.strip()
+
+            if not line:
+                continue
+
+            if line.startswith("[") and "]:" in line:
+                time = line[1:9]
+                message = line[10:].strip()
+
+                level = "warn" if any(
+                    word in message.lower()
+                    for word in ["warn", "error", "fail"]
+                ) else "ok"
+
+                entries.append({
+                    "time": time,
+                    "level": level,
+                    "message": message
+                })
+
+        entries.reverse()
+
+        return {
+            "success": True,
+            "entries": entries
+        }
+
+    except Exception as error:
+        return {
+            "success": False,
+            "error": str(error)
+        }, 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
