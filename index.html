@@ -34,6 +34,16 @@
           </svg>
           <span>Diagnose</span>
         </button>
+        <button type="button" class="nav-item" data-target="ping">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="2" />
+            <path d="M5.6 5.6a9 9 0 0 0 0 12.8" />
+            <path d="M18.4 5.6a9 9 0 0 1 0 12.8" />
+            <path d="M8.4 8.4a5 5 0 0 0 0 7.2" />
+            <path d="M15.6 8.4a5 5 0 0 1 0 7.2" />
+          </svg>
+          <span>Ping</span>
+        </button>
         <button type="button" class="nav-item" data-target="repair">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M14 3a2 2 0 0 1 2.8 2.8L7 16.5 3 18l1.5-4L14 3Z" />
@@ -193,6 +203,38 @@
               <li class="log-empty">Audit-Log wird geladen...</li>
             </ul>
           </div>
+        </div>
+      </section>
+      <section class="view" data-view="ping">
+        <div class="content">
+
+          <div class="card panel-card">
+
+            <div class="panel-heading">
+              <span class="panel-badge">Network</span>
+              <h2>Ping</h2>
+            </div>
+
+            <div class="ping-body">
+
+              <div class="ping-input-row">
+
+                <input type="text" id="ping-target" placeholder="IP-Adresse oder Hostname" value="8.8.8.8">
+
+                <button type="button" id="ping-button">
+                  Ping starten
+                </button>
+
+              </div>
+
+              <div id="ping-result">
+                <p>Adresse eingeben und Ping starten.</p>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
       </section>
     </main>

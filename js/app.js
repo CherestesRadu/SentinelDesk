@@ -212,3 +212,112 @@ async function runSystemDiagnosis() {
         `;
   }
 }
+
+const pingButton = document.getElementById('ping-button');
+
+if (pingButton) {
+  pingButton.addEventListener('click', runPing);
+}
+
+async function runPing() {
+
+  const input = document.getElementById('ping-target');
+  const resultBox = document.getElementById('ping-result');
+
+  const target = input.value.trim();
+
+  if (!target) {
+    resultBox.innerHTML = `
+            <p>Bitte eine Adresse eingeben.</p>
+        `;
+
+    return;
+  }
+
+  resultBox.innerHTML = `
+        <p>Ping wird ausgeführt...</p>
+    `;
+
+  try {
+
+    const response = await fetch('api/run.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        module: 'ping',
+        target: target
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(
+        result.error || 'Ping fehlgeschlagen'
+      );
+    }
+
+    showPingResult(result.data);
+
+  } catch (error) {
+
+    console.error(error);
+
+    resultBox.innerHTML = `
+            <p>Fehler: ${error.message}</p>
+        `;
+  }
+}
+
+function showPingResult(data) {
+
+  const resultBox = document.getElementById('ping-result');
+
+  if (data.reachable) {
+
+    resultBox.innerHTML = `
+            <div>
+                <h3>✓ ${data.target} erreichbar</h3>
+
+                <p>
+                    Pakete:
+                    ${data.packets_received}/${data.packets_sent}
+                </p>
+
+                <p>
+                    Paketverlust:
+                    ${data.loss_percent}%
+                </p>
+
+                <p>
+                    Durchschnitt:
+                    ${data.average_ms} ms
+                </p>
+            </div>
+        `;
+
+  } else {
+
+    resultBox.innerHTML = `
+            <div>
+                <h3>✕ ${data.target} nicht erreichbar</h3>
+
+                <p>
+                    Pakete:
+                    ${data.packets_received}/${data.packets_sent}
+                </p>
+
+                <p>
+                    Paketverlust:
+                    ${data.loss_percent}%
+                </p>
+            </div>
+        `;
+  }
+}

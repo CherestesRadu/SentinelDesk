@@ -18,6 +18,7 @@ def run_module():
     data = request.get_json()
 
     module = data.get("module")
+    target = data.get("target") # for ping
 
     module_path = os.path.join("agent/modules", f"{module}.ps1")
 
@@ -27,16 +28,33 @@ def run_module():
             "error": "Module not found"
         }, 404
 
+    arguments = []
+    if module == "ping":
+        if not isinstance(target, str) or not target.strip():
+            return {
+                "success": False,
+                "error": "Ping target is required"
+            }, 400
+
+        arguments = [
+            "-Target",
+            target.strip()
+        ]
+    
     result = subprocess.run(
         [
             "powershell",
+            "-NoProfile",
+            "-NonInteractive",
             "-ExecutionPolicy",
             "Bypass",
             "-File",
-            module_path
+            module_path,
+            *arguments
         ],
         capture_output=True,
-        text=True
+        text=True,
+        timeout=30
     )
 
     return result.stdout
