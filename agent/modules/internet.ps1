@@ -1,6 +1,6 @@
 $target = "8.8.8.8"
 
-$date = (Get-Date).ToString('[ dd.MM.yy HH:mm:ss ]:')
+$date = (Get-Date).ToString('[ dd.MM.yyyy HH:mm:ss ]:')
 
 $result = Test-Connection -ComputerName $target -Count 1 -Quiet
 
