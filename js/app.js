@@ -63,7 +63,7 @@ actionCards.forEach(card => {
     event.preventDefault();
     const label = card.querySelector('strong')?.textContent || 'Aktion';
     if (label === "Jetzt prüfen") {
-      runNetworkDiagnosis();
+      runSystemDiagnosis();
       return;
     }
     toast(label + ' ausgelöst');
@@ -122,32 +122,32 @@ async function loadAuditLog() {
 loadAuditLog();
 
 async function runModule(module) {
-    const response = await fetch('api/run.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            module: module
-        })
-    });
+  const response = await fetch('api/run.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      module: module
+    })
+  });
 
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
-    const result = await response.json()
-    console.log(result)
-    return result;
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const result = await response.json()
+  console.log(result)
+  return result;
 }
 
-async function runNetworkDiagnosis() {
-    showView('diagnose');
+async function runSystemDiagnosis() {
+  showView('diagnose');
 
-    const diagnoseBody = document.querySelector('.diagnose-body');
+  const diagnoseBody = document.querySelector('.diagnose-body');
 
-    if (!diagnoseBody) return;
+  if (!diagnoseBody) return;
 
-    diagnoseBody.innerHTML = `
+  diagnoseBody.innerHTML = `
         <div class="scan-column">
             <p>System wird geprüft...</p>
         </div>
@@ -157,22 +157,27 @@ async function runNetworkDiagnosis() {
         </div>
     `;
 
-    try {
-        const hostnameResult = await runModule('hostname');
-        const networkResult = await runModule('network');
+  try {
+    const hostnameResult = await runModule('hostname');
+    const networkResult = await runModule('network');
+    const internetResult = await runModule('internet');
+    if (!hostnameResult.success) {
+      throw new Error(hostnameResult.error || 'Hostname diagnosis failed');
+    }
 
-        if (!hostnameResult.success) {
-            throw new Error(hostnameResult.error || 'Hostname diagnosis failed');
-        }
+    if (!networkResult.success) {
+      throw new Error(networkResult.error || 'Network diagnosis failed');
+    }
 
-        if (!networkResult.success) {
-            throw new Error(networkResult.error || 'Network diagnosis failed');
-        }
+    if (!internetResult.success) {
+      throw new Error(internetResult.error || 'Internet diagnosis failed');
+    }
 
-        const hostname = hostnameResult.data.hostname;
-        const network = networkResult.data;
+    const hostname = hostnameResult.data.hostname;
+    const network = networkResult.data;
+    const internet = internetResult.data;
 
-        diagnoseBody.innerHTML = `
+    diagnoseBody.innerHTML = `
             <div class="scan-column">
                 <p><strong>System-Analyse abgeschlossen</strong></p>
 
@@ -183,6 +188,7 @@ async function runNetworkDiagnosis() {
                     <li>Subnetz: /${network.prefix}</li>
                     <li>Gateway: ${network.gateway}</li>
                     <li>DNS: ${network.dns.join(', ')}</li>
+                    <li>Internet: ${internet.connected ? 'Connected' : 'No connection'}</li>
                 </ul>
             </div>
 
@@ -191,10 +197,10 @@ async function runNetworkDiagnosis() {
             </div>
         `;
 
-    } catch (error) {
-        console.error(error);
+  } catch (error) {
+    console.error(error);
 
-        diagnoseBody.innerHTML = `
+    diagnoseBody.innerHTML = `
             <div class="scan-column">
                 <p><strong>System-Analyse fehlgeschlagen</strong></p>
                 <p>${error.message}</p>
@@ -204,5 +210,5 @@ async function runNetworkDiagnosis() {
                 <div class="progress-ring">!</div>
             </div>
         `;
-    }
+  }
 }
