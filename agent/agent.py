@@ -71,16 +71,18 @@ def audit():
                 continue
 
             if line.startswith("[") and "]:" in line:
-                time = line[1:9]
-                message = line[10:].strip()
-
+                timestamp, message = line.split("]:", 1)
+            
+                timestamp = timestamp.strip("[] ")
+                message = message.strip()
+            
                 level = "warn" if any(
                     word in message.lower()
                     for word in ["warn", "error", "fail"]
                 ) else "ok"
-
+            
                 entries.append({
-                    "time": time,
+                    "time": timestamp,
                     "level": level,
                     "message": message
                 })
