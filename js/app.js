@@ -62,6 +62,10 @@ actionCards.forEach(card => {
   card.addEventListener('click', event => {
     event.preventDefault();
     const label = card.querySelector('strong')?.textContent || 'Aktion';
+    if (label === "Jetzt prüfen") {
+      runNetworkDiagnosis();
+      return;
+    }
     toast(label + ' ausgelöst');
   });
 });
@@ -136,4 +140,69 @@ async function runModule(module) {
     return result;
 }
 
-runModule('network')
+async function runNetworkDiagnosis() {
+    showView('diagnose');
+
+    const diagnoseBody = document.querySelector('.diagnose-body');
+
+    if (!diagnoseBody) return;
+
+    diagnoseBody.innerHTML = `
+        <div class="scan-column">
+            <p>System wird geprüft...</p>
+        </div>
+
+        <div class="progress-box">
+            <div class="progress-ring">...</div>
+        </div>
+    `;
+
+    try {
+        const hostnameResult = await runModule('hostname');
+        const networkResult = await runModule('network');
+
+        if (!hostnameResult.success) {
+            throw new Error(hostnameResult.error || 'Hostname diagnosis failed');
+        }
+
+        if (!networkResult.success) {
+            throw new Error(networkResult.error || 'Network diagnosis failed');
+        }
+
+        const hostname = hostnameResult.data.hostname;
+        const network = networkResult.data;
+
+        diagnoseBody.innerHTML = `
+            <div class="scan-column">
+                <p><strong>System-Analyse abgeschlossen</strong></p>
+
+                <ul>
+                    <li>Hostname: ${hostname}</li>
+                    <li>Interface: ${network.interface}</li>
+                    <li>IPv4: ${network.ipv4}</li>
+                    <li>Subnetz: /${network.prefix}</li>
+                    <li>Gateway: ${network.gateway}</li>
+                    <li>DNS: ${network.dns.join(', ')}</li>
+                </ul>
+            </div>
+
+            <div class="progress-box">
+                <div class="progress-ring">✓</div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error(error);
+
+        diagnoseBody.innerHTML = `
+            <div class="scan-column">
+                <p><strong>System-Analyse fehlgeschlagen</strong></p>
+                <p>${error.message}</p>
+            </div>
+
+            <div class="progress-box">
+                <div class="progress-ring">!</div>
+            </div>
+        `;
+    }
+}
