@@ -140,6 +140,16 @@ async function runModule(module) {
   return result;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+
 async function runSystemDiagnosis() {
   showView('diagnose');
 
@@ -161,6 +171,32 @@ async function runSystemDiagnosis() {
     const hostnameResult = await runModule('hostname');
     const networkResult = await runModule('network');
     const internetResult = await runModule('internet');
+    const ssdResult = await runModule('ssd');
+
+    const storage = ssdResult.success ? ssdResult.data : null;
+
+    const diskItems = (storage?.disks ?? []).map(disk => `
+  <li>
+    ${escapeHtml(disk.model)} —
+    ${escapeHtml(disk.mediaType)},
+    ${Number(disk.sizeGB).toFixed(2)} GB,
+    Status: ${escapeHtml(disk.healthStatus)}
+  </li>
+`).join('');
+
+    const volumeItems = (storage?.volumes ?? []).map(volume => `
+  <li>
+    ${escapeHtml(volume.driveLetter)} —
+    ${Number(volume.freeGB).toFixed(2)} GB frei von
+    ${Number(volume.sizeGB).toFixed(2)} GB insgesamt
+    (${Number(volume.freePercent).toFixed(1)} % frei)
+  </li>
+`).join('');
+
+    const storageWarnings = (storage?.warnings ?? []).map(warning => `
+  <li>${escapeHtml(warning)}</li>
+`).join('');
+
     if (!hostnameResult.success) {
       throw new Error(hostnameResult.error || 'Hostname diagnosis failed');
     }
@@ -189,6 +225,31 @@ async function runSystemDiagnosis() {
                     <li>Gateway: ${network.gateway}</li>
                     <li>DNS: ${network.dns.join(', ')}</li>
                     <li>Internet: ${internet.connected ? 'Connected' : 'No connection'}</li>
+                    <li>
+                      <strong>Datenträger-Status:</strong>
+                      ${escapeHtml(storage?.summary?.healthStatus || 'Nicht verfügbar')}
+                    </li>
+
+                    <li>
+                      <strong>Datenträger:</strong>
+                      <ul>
+                        ${diskItems || '<li>Keine Datenträgerinformationen verfügbar.</li>'}
+                      </ul>
+                    </li>
+
+                    <li>
+                      <strong>Volumes:</strong>
+                      <ul>
+                        ${volumeItems || '<li>Keine Volume-Informationen verfügbar.</li>'}
+                      </ul>
+                    </li>
+
+                    ${storageWarnings ? `
+                      <li>
+                        <strong>Speicher-Warnungen:</strong>
+                        <ul>${storageWarnings}</ul>
+                      </li>
+                    ` : ''}
                 </ul>
             </div>
 
