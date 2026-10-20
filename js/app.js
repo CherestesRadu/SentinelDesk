@@ -150,6 +150,7 @@ function escapeHtml(value) {
   })[character]);
 }
 
+
 async function runSystemDiagnosis() {
   showView('diagnose');
 
@@ -158,125 +159,176 @@ async function runSystemDiagnosis() {
   if (!diagnoseBody) return;
 
   diagnoseBody.innerHTML = `
-        <div class="scan-column">
-            <p>System wird geprüft...</p>
-        </div>
-
-        <div class="progress-box">
-            <div class="progress-ring">...</div>
-        </div>
-    `;
+    <div class="scan-column">
+      <p>System wird geprüft...</p>
+    </div>
+    <div class="progress-box">
+      <div class="progress-ring">...</div>
+    </div>
+  `;
 
   try {
     const hostnameResult = await runModule('hostname');
     const networkResult = await runModule('network');
-    const internetResult = await runModule('internet');
     const ssdResult = await runModule('ssd');
 
-    const storage = ssdResult.success ? ssdResult.data : null;
-
-    const diskItems = (storage?.disks ?? []).map(disk => `
-  <li>
-    ${escapeHtml(disk.model)} —
-    ${escapeHtml(disk.mediaType)},
-    ${Number(disk.sizeGB).toFixed(2)} GB,
-    Status: ${escapeHtml(disk.healthStatus)}
-  </li>
-`).join('');
-
-    const volumeItems = (storage?.volumes ?? []).map(volume => `
-  <li>
-    ${escapeHtml(volume.driveLetter)} —
-    ${Number(volume.freeGB).toFixed(2)} GB frei von
-    ${Number(volume.sizeGB).toFixed(2)} GB insgesamt
-    (${Number(volume.freePercent).toFixed(1)} % frei)
-  </li>
-`).join('');
-
-    const storageWarnings = (storage?.warnings ?? []).map(warning => `
-  <li>${escapeHtml(warning)}</li>
-`).join('');
-
     if (!hostnameResult.success) {
-      throw new Error(hostnameResult.error || 'Hostname diagnosis failed');
+      throw new Error(
+        hostnameResult.error || 'Hostname diagnosis failed'
+      );
     }
 
     if (!networkResult.success) {
-      throw new Error(networkResult.error || 'Network diagnosis failed');
-    }
-
-    if (!internetResult.success) {
-      throw new Error(internetResult.error || 'Internet diagnosis failed');
+      throw new Error(
+        networkResult.error || 'Network diagnosis failed'
+      );
     }
 
     const hostname = hostnameResult.data.hostname;
     const network = networkResult.data;
-    const internet = internetResult.data;
-    const dnsServers = Array.isArray(network.dns)
-      ? network.dns
-      : network.dns
-        ? [network.dns]
+
+    // Alle Netzwerkadapter vorbereiten
+    const interfaces = Array.isArray(network.interfaces)
+      ? network.interfaces
+      : [];
+
+    const interfaceItems = interfaces.map((item) => {
+      const ipv4 = Array.isArray(item.ipv4) ? item.ipv4 : [];
+      const gateways = Array.isArray(item.gateways)
+        ? item.gateways
         : [];
+      const dns = Array.isArray(item.dns) ? item.dns : [];
+
+      const statusClass = item.internet
+        ? 'ok'
+        : item.status === 'Up'
+          ? 'warn'
+          : '';
+
+      return `
+        <li>
+          <strong>${escapeHtml(item.name || 'Unbekannt')}</strong>
+          <ul>
+            <li>Status: ${escapeHtml(item.status || 'Unbekannt')}</li>
+            <li>
+              IPv4:
+              ${escapeHtml(ipv4.join(', ') || 'Keine IPv4-Adresse')}
+            </li>
+            <li>
+              Gateway:
+              ${escapeHtml(gateways.join(', ') || 'Kein Gateway')}
+            </li>
+            <li>
+              DNS:
+              ${escapeHtml(dns.join(', ') || 'Nicht konfiguriert')}
+            </li>
+            <li>
+              Internet:
+              <strong class="${statusClass}">
+                ${escapeHtml(item.internetStatus || 'Nicht getestet')}
+              </strong>
+            </li>
+            <li>
+              MAC:
+              ${escapeHtml(item.macAddress || 'Unbekannt')}
+            </li>
+          </ul>
+        </li>
+      `;
+    }).join('');
+
+    const networkSummary = `
+      <li>
+        <strong>Netzwerkadapter (${interfaces.length})</strong>
+        <ul>
+          ${interfaceItems || '<li>Keine Netzwerkadapter gefunden.</li>'}
+        </ul>
+      </li>
+    `;
+
+    // Datenträgerdaten vorbereiten
+    const storage = ssdResult.success ? ssdResult.data : null;
+
+    const diskItems = (storage?.disks ?? []).map(disk => `
+      <li>
+        ${escapeHtml(disk.model)} —
+        ${escapeHtml(disk.mediaType)},
+        ${Number(disk.sizeGB).toFixed(2)} GB,
+        Status: ${escapeHtml(disk.healthStatus)}
+      </li>
+    `).join('');
+
+    const volumeItems = (storage?.volumes ?? []).map(volume => `
+      <li>
+        ${escapeHtml(volume.driveLetter)} —
+        ${Number(volume.freeGB).toFixed(2)} GB frei von
+        ${Number(volume.sizeGB).toFixed(2)} GB insgesamt
+        (${Number(volume.freePercent).toFixed(1)} % frei)
+      </li>
+    `).join('');
+
+    const storageWarnings = (storage?.warnings ?? []).map(warning => `
+      <li>${escapeHtml(warning)}</li>
+    `).join('');
+
     diagnoseBody.innerHTML = `
-            <div class="scan-column">
-                <p><strong>System-Analyse abgeschlossen</strong></p>
+      <div class="scan-column">
+        <p><strong>System-Analyse abgeschlossen</strong></p>
 
-                <ul>
-                    <li>Hostname: ${hostname}</li>
-                    <li>Interface: ${network.interface}</li>
-                    <li>IPv4: ${network.ipv4}</li>
-                    <li>Subnetz: /${network.prefix}</li>
-                    <li>Gateway: ${network.gateway}</li>
-                    <li>DNS: ${dnsServers.join(', ') || 'Nicht verfügbar'}</li>
-                    <li>Internet: ${internet.connected ? 'Connected' : 'No connection'}</li>
-                    <li>
-                      <strong>Datenträger-Status:</strong>
-                      ${escapeHtml(storage?.summary?.healthStatus || 'Nicht verfügbar')}
-                    </li>
+        <ul>
+          <li>Hostname: ${escapeHtml(hostname || 'Unbekannt')}</li>
 
-                    <li>
-                      <strong>Datenträger:</strong>
-                      <ul>
-                        ${diskItems || '<li>Keine Datenträgerinformationen verfügbar.</li>'}
-                      </ul>
-                    </li>
+          ${networkSummary}
 
-                    <li>
-                      <strong>Volumes:</strong>
-                      <ul>
-                        ${volumeItems || '<li>Keine Volume-Informationen verfügbar.</li>'}
-                      </ul>
-                    </li>
+          <li>
+            <strong>Datenträger-Status:</strong>
+            ${escapeHtml(storage?.summary?.healthStatus || 'Nicht verfügbar')}
+          </li>
 
-                    ${storageWarnings ? `
-                      <li>
-                        <strong>Speicher-Warnungen:</strong>
-                        <ul>${storageWarnings}</ul>
-                      </li>
-                    ` : ''}
-                </ul>
-            </div>
+          <li>
+            <strong>Datenträger:</strong>
+            <ul>
+              ${diskItems || '<li>Keine Datenträgerinformationen verfügbar.</li>'}
+            </ul>
+          </li>
 
-            <div class="progress-box">
-                <div class="progress-ring">✓</div>
-            </div>
-        `;
+          <li>
+            <strong>Volumes:</strong>
+            <ul>
+              ${volumeItems || '<li>Keine Volume-Informationen verfügbar.</li>'}
+            </ul>
+          </li>
+
+          ${storageWarnings ? `
+            <li>
+              <strong>Speicher-Warnungen:</strong>
+              <ul>${storageWarnings}</ul>
+            </li>
+          ` : ''}
+        </ul>
+      </div>
+
+      <div class="progress-box">
+        <div class="progress-ring">✓</div>
+      </div>
+    `;
 
   } catch (error) {
     console.error(error);
 
     diagnoseBody.innerHTML = `
-            <div class="scan-column">
-                <p><strong>System-Analyse fehlgeschlagen</strong></p>
-                <p>${error.message}</p>
-            </div>
+      <div class="scan-column">
+        <p><strong>System-Analyse fehlgeschlagen</strong></p>
+        <p>${escapeHtml(error.message || 'Unbekannter Fehler')}</p>
+      </div>
 
-            <div class="progress-box">
-                <div class="progress-ring">!</div>
-            </div>
-        `;
+      <div class="progress-box">
+        <div class="progress-ring">!</div>
+      </div>
+    `;
   }
 }
+
 
 const pingButton = document.getElementById('ping-button');
 
