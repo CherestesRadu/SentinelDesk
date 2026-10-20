@@ -171,6 +171,7 @@ async function runSystemDiagnosis() {
     const hostnameResult = await runModule('hostname');
     const networkResult = await runModule('network');
     const ssdResult = await runModule('ssd');
+    const ramResult = await runModule('ram');
 
     if (!hostnameResult.success) {
       throw new Error(
@@ -249,6 +250,25 @@ async function runSystemDiagnosis() {
     // Datenträgerdaten vorbereiten
     const storage = ssdResult.success ? ssdResult.data : null;
 
+    const memory = ramResult.success ? ramResult.data : null;
+
+    const ramSummary = `
+  <li>
+    <strong>Arbeitsspeicher (RAM):</strong>
+    <ul>
+      <li>Installiert: ${memory ? `${Number(memory.installedGB).toFixed(2)} GB` : 'Nicht verfügbar'}</li>
+      <li>Verwendbar: ${memory ? `${Number(memory.usableGB).toFixed(2)} GB` : 'Nicht verfügbar'}</li>
+      <li>Belegt: ${memory ? `${Number(memory.usedGB).toFixed(2)} GB` : 'Nicht verfügbar'}</li>
+      <li>Verfügbar: ${memory ? `${Number(memory.availableGB).toFixed(2)} GB` : 'Nicht verfügbar'}</li>
+      <li>
+        Auslastung:
+        <strong>${memory ? `${Number(memory.usagePercent).toFixed(1)} %` : 'Nicht verfügbar'}</strong>
+      </li>
+      <li>Speichermodule: ${memory ? memory.moduleCount : 'Nicht verfügbar'}</li>
+    </ul>
+  </li>
+`;
+
     const diskItems = (storage?.disks ?? []).map(disk => `
       <li>
         ${escapeHtml(disk.model)} —
@@ -279,6 +299,7 @@ async function runSystemDiagnosis() {
           <li>Hostname: ${escapeHtml(hostname || 'Unbekannt')}</li>
 
           ${networkSummary}
+          ${ramSummary}
 
           <li>
             <strong>Datenträger-Status:</strong>
