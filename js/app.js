@@ -212,7 +212,11 @@ async function runSystemDiagnosis() {
     const hostname = hostnameResult.data.hostname;
     const network = networkResult.data;
     const internet = internetResult.data;
-
+    const dnsServers = Array.isArray(network.dns)
+      ? network.dns
+      : network.dns
+        ? [network.dns]
+        : [];
     diagnoseBody.innerHTML = `
             <div class="scan-column">
                 <p><strong>System-Analyse abgeschlossen</strong></p>
@@ -223,7 +227,7 @@ async function runSystemDiagnosis() {
                     <li>IPv4: ${network.ipv4}</li>
                     <li>Subnetz: /${network.prefix}</li>
                     <li>Gateway: ${network.gateway}</li>
-                    <li>DNS: ${network.dns.join(', ')}</li>
+                    <li>DNS: ${dnsServers.join(', ') || 'Nicht verfügbar'}</li>
                     <li>Internet: ${internet.connected ? 'Connected' : 'No connection'}</li>
                     <li>
                       <strong>Datenträger-Status:</strong>
