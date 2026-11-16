@@ -7,6 +7,21 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+
+def repair_mojibake(text):
+    """Recover UTF-8 text that was accidentally decoded as a Windows code page."""
+    if not any(marker in text for marker in ("Ã", "Â", "â€")):
+        return text
+
+    try:
+        repaired = text.encode("cp1252").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+    return repaired if sum(repaired.count(marker) for marker in ("Ã", "Â", "â€")) < sum(
+        text.count(marker) for marker in ("Ã", "Â", "â€")
+    ) else text
+
 @app.route("/status")
 def status():
     return {
@@ -76,7 +91,7 @@ def audit():
         if raw.startswith(b"\xff\xfe"):
             contents = raw[2:].decode("utf-16-le")
         else:
-            contents = raw.decode("utf-8")
+            contents = raw.decode("utf-8-sig")
 
         lines = contents.splitlines()
 
@@ -102,7 +117,7 @@ def audit():
                 entries.append({
                     "time": timestamp,
                     "level": level,
-                    "message": message
+                    "message": repair_mojibake(message)
                 })
 
         entries.reverse()

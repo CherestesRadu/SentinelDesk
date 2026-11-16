@@ -1,4 +1,4 @@
-
+﻿
 # SentinelDesk - SSD / Storage Diagnosis
 
 $warnings = @()

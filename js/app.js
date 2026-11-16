@@ -1,6 +1,29 @@
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || 'demo-token';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+const themeToggle = document.getElementById('theme-toggle');
+const savedTheme = localStorage.getItem('sentineldesk-theme');
+if (savedTheme === 'night') document.body.dataset.theme = 'night';
+
+function updateThemeToggle() {
+  if (!themeToggle) return;
+  const isNight = document.body.dataset.theme === 'night';
+  themeToggle.setAttribute('aria-pressed', String(isNight));
+  themeToggle.setAttribute('aria-label', isNight ? 'Tagmodus einschalten' : 'Nachtmodus einschalten');
+  const label = themeToggle.querySelector('.theme-toggle-label');
+  if (label) label.textContent = isNight ? 'Tagmodus' : 'Nachtmodus';
+}
+
+if (themeToggle) {
+  updateThemeToggle();
+  themeToggle.addEventListener('click', () => {
+    const isNight = document.body.dataset.theme !== 'night';
+    document.body.dataset.theme = isNight ? 'night' : 'day';
+    localStorage.setItem('sentineldesk-theme', isNight ? 'night' : 'day');
+    updateThemeToggle();
+  });
+}
+
 function toast(text) {
   const t = document.getElementById('toast');
   if (!t) return;
@@ -108,6 +131,13 @@ function renderAuditLog(entries) {
 }
 
 async function loadAuditLog() {
+  const refreshButton = document.getElementById('audit-refresh');
+  if (refreshButton) {
+    refreshButton.disabled = true;
+    refreshButton.classList.add('is-refreshing');
+    refreshButton.setAttribute('aria-busy', 'true');
+  }
+
   try {
     const response = await fetch('./api/audit.php');
     const data = await response.json();
@@ -118,8 +148,17 @@ async function loadAuditLog() {
       list.innerHTML = '<li class="log-empty">Audit-Log konnte nicht geladen werden.</li>';
     });
     console.error(error);
+  } finally {
+    if (refreshButton) {
+      refreshButton.disabled = false;
+      refreshButton.classList.remove('is-refreshing');
+      refreshButton.removeAttribute('aria-busy');
+    }
   }
 }
+
+const auditRefreshButton = document.getElementById('audit-refresh');
+if (auditRefreshButton) auditRefreshButton.addEventListener('click', loadAuditLog);
 
 loadAuditLog();
 
@@ -159,12 +198,22 @@ async function runDiagnosticModule(module, options = {}) {
 }
 
 
-async function runSystemDiagnosis() {
-  showView('diagnose');
+async function runSystemDiagnosis(options = {}) {
+  if (options.showDiagnose !== false) showView('diagnose');
 
   const diagnoseBody = document.querySelector('.diagnose-body');
 
   if (!diagnoseBody) return;
+
+  const healthRunButton = document.getElementById('health-run-button');
+  if (healthRunButton) {
+    healthRunButton.disabled = true;
+    healthRunButton.textContent = 'Diagnose läuft…';
+  }
+  updateHealthItem('internet', 'Prüfung läuft…', 'pending');
+  updateHealthItem('network', 'Prüfung läuft…', 'pending');
+  updateHealthItem('ram', 'Prüfung läuft…', 'pending');
+  updateHealthItem('disk', 'Prüfung läuft…', 'pending');
 
   diagnoseBody.innerHTML = `
     <div class="scan-column">
@@ -254,6 +303,35 @@ async function runSystemDiagnosis() {
     const storage = ssdResult.data || null;
 
     const memory = ramResult.data || null;
+
+    const upInterfaces = interfaces.filter(item => item.status === 'Up');
+    updateHealthItem(
+      'internet',
+      internet ? (internet.connected ? 'Verbunden' : 'Nicht verbunden') : 'Nicht verfügbar',
+      internet ? (internet.connected ? 'ok' : 'bad') : 'unknown'
+    );
+    updateHealthItem(
+      'network',
+      networkResult.success
+        ? `Aktive Schnittstellen: ${upInterfaces.length}`
+        : 'Nicht verfügbar',
+      networkResult.success ? (upInterfaces.length ? 'ok' : 'warn') : 'unknown'
+    );
+    const ramUsage = Number(memory?.usagePercent);
+    updateHealthItem(
+      'ram',
+      Number.isFinite(ramUsage) ? `${ramUsage.toFixed(1)} % belegt` : 'Nicht verfügbar',
+      Number.isFinite(ramUsage) ? (ramUsage >= 90 ? 'warn' : 'ok') : 'unknown'
+    );
+    const diskStatus = storage?.summary?.healthStatus;
+    const diskHealthy = /healthy|ok|gesund|online/i.test(String(diskStatus || ''));
+    updateHealthItem(
+      'disk',
+      diskStatus || 'Nicht verfügbar',
+      diskStatus ? (diskHealthy ? 'ok' : 'warn') : 'unknown'
+    );
+    const updated = document.getElementById('health-updated');
+    if (updated) updated.textContent = `Zuletzt geprüft: ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
 
     const ramSummary = `
   <li>
@@ -373,7 +451,28 @@ async function runSystemDiagnosis() {
         <div class="progress-ring">!</div>
       </div>
     `;
+    ['internet', 'network', 'ram', 'disk'].forEach(key => updateHealthItem(key, 'Diagnose fehlgeschlagen', 'bad'));
+    const updated = document.getElementById('health-updated');
+    if (updated) updated.textContent = 'Diagnose fehlgeschlagen';
+  } finally {
+    if (healthRunButton) {
+      healthRunButton.disabled = false;
+      healthRunButton.textContent = 'Diagnose starten';
+    }
   }
+}
+
+function updateHealthItem(key, value, state) {
+  const item = document.querySelector(`[data-health="${key}"]`);
+  if (!item) return;
+  item.dataset.state = state;
+  const description = item.querySelector('p');
+  if (description) description.textContent = value;
+}
+
+const healthRunButton = document.getElementById('health-run-button');
+if (healthRunButton) {
+  healthRunButton.addEventListener('click', () => runSystemDiagnosis({ showDiagnose: false }));
 }
 
 

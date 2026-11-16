@@ -61,11 +61,44 @@
         <h1 class="view-title">Dashboard</h1>
         <div class="status-icons">
           <span class="clock" id="clock">11:42</span>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Nachtmodus einschalten">
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" /></svg>
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
+            <span class="theme-toggle-label">Nachtmodus</span>
+          </button>
         </div>
       </header>
 
       <section class="view active" data-view="dashboard">
         <div class="content">
+          <section class="card health-card" aria-labelledby="health-heading">
+            <div class="health-heading">
+              <div>
+                <span class="panel-badge">Systemstatus</span>
+                <h2 id="health-heading">Gesundheitsübersicht</h2>
+                <p id="health-updated" class="health-updated" aria-live="polite">Noch keine Diagnose ausgeführt</p>
+              </div>
+              <button type="button" class="health-run-button" id="health-run-button">Diagnose starten</button>
+            </div>
+            <div class="health-grid" aria-live="polite">
+              <article class="health-item" data-health="internet">
+                <span class="health-indicator" aria-hidden="true"></span>
+                <div><h3>Internet</h3><p>Warte auf Diagnose</p></div>
+              </article>
+              <article class="health-item" data-health="network">
+                <span class="health-indicator" aria-hidden="true"></span>
+                <div><h3>Netzwerk</h3><p>Warte auf Diagnose</p></div>
+              </article>
+              <article class="health-item" data-health="ram">
+                <span class="health-indicator" aria-hidden="true"></span>
+                <div><h3>RAM</h3><p>Warte auf Diagnose</p></div>
+              </article>
+              <article class="health-item" data-health="disk">
+                <span class="health-indicator" aria-hidden="true"></span>
+                <div><h3>Datenträger</h3><p>Warte auf Diagnose</p></div>
+              </article>
+            </div>
+          </section>
           <div class="card log-card">
             <div class="log-head">
               <svg viewBox="0 0 24 24" class="log-icon" aria-hidden="true">
@@ -76,6 +109,10 @@
               <a href="#" class="link-btn">Alle Einträge <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="m9 6 6 6-6 6" />
                 </svg></a>
+              <button type="button" class="audit-refresh" id="audit-refresh" aria-label="Audit-Log aktualisieren">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5" /><path d="M4.9 9a8 8 0 0 1 13.4-2L20 12M4 17v-5h5" /><path d="M19.1 15a8 8 0 0 1-13.4 2L4 12" /></svg>
+                <span>Aktualisieren</span>
+              </button>
             </div>
             <ul class="log-list" data-audit-list>
               <li class="log-empty">Audit-Log wird geladen...</li>
