@@ -30,7 +30,7 @@ else {
 }
 
 $log_output = $date + " Ping $Target - $received/$sent packets received."
-$log_output | Out-File ./agent/logs/audit.log -Append
+$log_output | Out-File ./agent/logs/audit.log -Append -Encoding utf8
 
 @{
     success = $true

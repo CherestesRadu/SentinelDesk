@@ -198,7 +198,7 @@ try {
         $message = "$date Datenträgerdiagnose abgeschlossen: $($disks.Count) Datenträger, $($volumes.Count) Volume(s)."
     }
 
-    $message | Out-File -FilePath $logPath -Append -Encoding Unicode
+    $message | Out-File -FilePath $logPath -Append -Encoding utf8
 }
 catch {
     $warnings += "Could not write audit log: $($_.Exception.Message)"

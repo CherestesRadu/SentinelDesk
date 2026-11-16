@@ -38,6 +38,7 @@ function showView(target) {
   const viewNames = {
     dashboard: 'Dashboard',
     diagnose: 'Diagnose',
+    traceroute: 'Traceroute',
     repair: 'Reparatur',
     updates: 'Updates',
     audit: 'Verlauf / Audit-Log',
@@ -54,6 +55,7 @@ function showView(target) {
 navItems.forEach(item => {
   item.addEventListener('click', () => {
     showView(item.dataset.target);
+    if (item.dataset.target === 'diagnose') runSystemDiagnosis();
   });
 });
 
@@ -121,23 +123,19 @@ async function loadAuditLog() {
 
 loadAuditLog();
 
-async function runModule(module) {
+async function runModule(module, options = {}) {
   const response = await fetch('api/run.php', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      module: module
-    })
+    body: JSON.stringify({ module, ...options })
   });
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
-  const result = await response.json()
-  console.log(result)
-  return result;
+  return response.json();
 }
 
 function escapeHtml(value) {
@@ -148,6 +146,16 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   })[character]);
+}
+
+async function runDiagnosticModule(module, options = {}) {
+  try {
+    const result = await runModule(module, options);
+    if (!result.success) throw new Error(result.error || 'Modul meldet einen Fehler');
+    return result;
+  } catch (error) {
+    return { success: false, error: error.message || 'Modul konnte nicht ausgeführt werden' };
+  }
 }
 
 
@@ -168,25 +176,17 @@ async function runSystemDiagnosis() {
   `;
 
   try {
-    const hostnameResult = await runModule('hostname');
-    const networkResult = await runModule('network');
-    const ssdResult = await runModule('ssd');
-    const ramResult = await runModule('ram');
+    const hostnameResult = await runDiagnosticModule('hostname');
+    const internetResult = await runDiagnosticModule('internet');
+    const networkResult = await runDiagnosticModule('network');
+    const pingResult = await runDiagnosticModule('ping', { target: '8.8.8.8' });
+    const ssdResult = await runDiagnosticModule('ssd');
+    const ramResult = await runDiagnosticModule('ram');
 
-    if (!hostnameResult.success) {
-      throw new Error(
-        hostnameResult.error || 'Hostname diagnosis failed'
-      );
-    }
-
-    if (!networkResult.success) {
-      throw new Error(
-        networkResult.error || 'Network diagnosis failed'
-      );
-    }
-
-    const hostname = hostnameResult.data.hostname;
-    const network = networkResult.data;
+    const hostname = hostnameResult.data?.hostname;
+    const internet = internetResult.data;
+    const network = networkResult.data || {};
+    const ping = pingResult.data;
 
     // Alle Netzwerkadapter vorbereiten
     const interfaces = Array.isArray(network.interfaces)
@@ -211,6 +211,8 @@ async function runSystemDiagnosis() {
           <strong>${escapeHtml(item.name || 'Unbekannt')}</strong>
           <ul>
             <li>Status: ${escapeHtml(item.status || 'Unbekannt')}</li>
+            <li>Beschreibung: ${escapeHtml(item.description || 'Nicht verfügbar')}</li>
+            <li>Interface-Index: ${escapeHtml(item.interfaceIndex ?? 'Nicht verfügbar')}</li>
             <li>
               IPv4:
               ${escapeHtml(ipv4.join(', ') || 'Keine IPv4-Adresse')}
@@ -233,6 +235,7 @@ async function runSystemDiagnosis() {
               MAC:
               ${escapeHtml(item.macAddress || 'Unbekannt')}
             </li>
+            <li>Verbindungstest-IP: ${escapeHtml(item.testSource || 'Nicht verfügbar')}</li>
           </ul>
         </li>
       `;
@@ -248,9 +251,9 @@ async function runSystemDiagnosis() {
     `;
 
     // Datenträgerdaten vorbereiten
-    const storage = ssdResult.success ? ssdResult.data : null;
+    const storage = ssdResult.data || null;
 
-    const memory = ramResult.success ? ramResult.data : null;
+    const memory = ramResult.data || null;
 
     const ramSummary = `
   <li>
@@ -275,6 +278,11 @@ async function runSystemDiagnosis() {
         ${escapeHtml(disk.mediaType)},
         ${Number(disk.sizeGB).toFixed(2)} GB,
         Status: ${escapeHtml(disk.healthStatus)}
+        <ul>
+          <li>Betriebsstatus: ${escapeHtml(Array.isArray(disk.operationalStatus) ? disk.operationalStatus.join(', ') : disk.operationalStatus || 'Nicht verfügbar')}</li>
+          <li>Seriennummer: ${escapeHtml(disk.serialNumber || 'Nicht verfügbar')}</li>
+          <li>Bus: ${escapeHtml(disk.busType || 'Nicht verfügbar')}</li>
+        </ul>
       </li>
     `).join('');
 
@@ -284,6 +292,11 @@ async function runSystemDiagnosis() {
         ${Number(volume.freeGB).toFixed(2)} GB frei von
         ${Number(volume.sizeGB).toFixed(2)} GB insgesamt
         (${Number(volume.freePercent).toFixed(1)} % frei)
+        <ul>
+          <li>Bezeichnung: ${escapeHtml(volume.label || 'Nicht verfügbar')}</li>
+          <li>Dateisystem: ${escapeHtml(volume.fileSystem || 'Nicht verfügbar')}</li>
+          <li>Gesundheitsstatus: ${escapeHtml(volume.healthStatus || 'Nicht verfügbar')}</li>
+        </ul>
       </li>
     `).join('');
 
@@ -298,12 +311,19 @@ async function runSystemDiagnosis() {
         <ul>
           <li>Hostname: ${escapeHtml(hostname || 'Unbekannt')}</li>
 
+          ${hostnameResult.error ? `<li>Fehler: ${escapeHtml(hostnameResult.error)}</li>` : ''}
+          <li><strong>Internetverbindung:</strong> ${internet ? `${escapeHtml(internet.connected ? 'Verbunden' : 'Nicht verbunden')} (Ziel: ${escapeHtml(internet.target)})` : `Nicht verfügbar${internetResult.error ? ` — ${escapeHtml(internetResult.error)}` : ''}`}</li>
+          <li><strong>Ping zu 8.8.8.8:</strong> ${ping ? `${escapeHtml(ping.reachable ? 'Erreichbar' : 'Nicht erreichbar')}; ${escapeHtml(ping.packets_received)}/${escapeHtml(ping.packets_sent)} Pakete empfangen; ${escapeHtml(ping.packets_lost)} verloren; ${escapeHtml(ping.loss_percent)} % Verlust; Durchschnitt ${escapeHtml(ping.average_ms ?? 'Nicht verfügbar')} ms` : `Nicht verfügbar${pingResult.error ? ` — ${escapeHtml(pingResult.error)}` : ''}`}</li>
+
           ${networkSummary}
+          ${networkResult.error ? `<li>Netzwerkfehler: ${escapeHtml(networkResult.error)}</li>` : ''}
           ${ramSummary}
+          ${ramResult.error ? `<li>RAM-Fehler: ${escapeHtml(ramResult.error)}</li>` : ''}
 
           <li>
             <strong>Datenträger-Status:</strong>
             ${escapeHtml(storage?.summary?.healthStatus || 'Nicht verfügbar')}
+            ${ssdResult.error ? ` — ${escapeHtml(ssdResult.error)}` : ''}
           </li>
 
           <li>
@@ -330,9 +350,15 @@ async function runSystemDiagnosis() {
       </div>
 
       <div class="progress-box">
-        <div class="progress-ring">✓</div>
+        <div class="progress-ring complete">✓</div>
       </div>
     `;
+    diagnoseBody.insertAdjacentHTML('beforeend', `
+      <details class="diagnose-raw">
+        <summary>Vollständige Moduldaten anzeigen</summary>
+        <pre>${escapeHtml(JSON.stringify({ hostname: hostnameResult, internet: internetResult, network: networkResult, ping: pingResult, ram: ramResult, ssd: ssdResult }, null, 2))}</pre>
+      </details>
+    `);
 
   } catch (error) {
     console.error(error);
@@ -457,5 +483,66 @@ function showPingResult(data) {
                 </p>
             </div>
         `;
+  }
+}
+
+const tracerouteButton = document.getElementById('traceroute-button');
+if (tracerouteButton) {
+  tracerouteButton.addEventListener('click', runTraceroute);
+}
+
+const tracerouteInput = document.getElementById('traceroute-target');
+if (tracerouteInput) {
+  tracerouteInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') runTraceroute();
+  });
+}
+
+async function runTraceroute() {
+  const input = document.getElementById('traceroute-target');
+  const resultBox = document.getElementById('traceroute-result');
+  const button = document.getElementById('traceroute-button');
+  const target = input.value.trim();
+
+  if (!target) {
+    resultBox.innerHTML = '<p>Bitte eine IP-Adresse oder einen Hostnamen eingeben.</p>';
+    return;
+  }
+
+  button.disabled = true;
+  resultBox.innerHTML = '<p>Traceroute läuft auf dem verbundenen PC. Das kann bis zu 30 Sekunden dauern …</p>';
+
+  try {
+    const response = await fetch('api/run.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module: 'traceroute', target })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Traceroute fehlgeschlagen');
+
+    const trace = result.data;
+    const hopRows = (trace.hops || []).map(hop => `
+      <li><strong>Hop ${escapeHtml(hop.number)}:</strong> ${escapeHtml(hop.details)}</li>
+    `).join('');
+    const rawOutput = (trace.output || []).join('\n');
+
+    resultBox.innerHTML = `
+      <div>
+        <h3>Route zu ${escapeHtml(trace.target)}</h3>
+        <p>${escapeHtml(trace.hopCount)} Hops · Exit-Code ${escapeHtml(trace.exitCode)}</p>
+        <ol class="traceroute-hops">${hopRows || '<li>Windows hat keine Hop-Zeilen zurückgegeben.</li>'}</ol>
+        <details>
+          <summary>Vollständige tracert-Ausgabe</summary>
+          <pre class="traceroute-output">${escapeHtml(rawOutput)}</pre>
+        </details>
+      </div>
+    `;
+  } catch (error) {
+    resultBox.innerHTML = `<p>Traceroute fehlgeschlagen: ${escapeHtml(error.message)}</p>`;
+  } finally {
+    button.disabled = false;
   }
 }

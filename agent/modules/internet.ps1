@@ -6,7 +6,7 @@ $result = Test-Connection -ComputerName $target -Count 1 -Quiet
 
 if ($result) {
     $log_output = $date + ' Internet connectivity check successful.'
-    $log_output | Out-File ./agent/logs/audit.log -Append
+    $log_output | Out-File ./agent/logs/audit.log -Append -Encoding utf8
 
     @{
         success = $true
@@ -18,7 +18,7 @@ if ($result) {
 }
 else {
     $log_output = $date + ' Internet connectivity check failed.'
-    $log_output | Out-File ./agent/logs/audit.log -Append
+    $log_output | Out-File ./agent/logs/audit.log -Append -Encoding utf8
 
     @{
         success = $true

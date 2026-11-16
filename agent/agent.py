@@ -18,7 +18,7 @@ def run_module():
     data = request.get_json()
 
     module = data.get("module")
-    target = data.get("target") # for ping
+    target = data.get("target") # for ping and traceroute
 
     module_path = os.path.join("agent/modules", f"{module}.ps1")
 
@@ -29,11 +29,11 @@ def run_module():
         }, 404
 
     arguments = []
-    if module == "ping":
+    if module in ("ping", "traceroute"):
         if not isinstance(target, str) or not target.strip():
             return {
                 "success": False,
-                "error": "Ping target is required"
+                "error": f"{module.capitalize()} target is required"
             }, 400
 
         arguments = [

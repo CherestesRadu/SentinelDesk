@@ -82,6 +82,7 @@ a { text-decoration: none; color: inherit; }
 .nav-item svg { width: 28px; height: 28px; color: var(--blue); }
 .nav-item:hover { background: #eef3ff; }
 .nav-item.active { background: var(--blue-soft); font-weight: 600; }
+.nav-item.nav-subitem { min-height: 48px; font-size: .95rem; }
 
 .sidebar-foot { margin-top: auto; padding: 0 8px; font-size: .8rem; color: var(--muted); }
 
@@ -208,17 +209,48 @@ a { text-decoration: none; color: inherit; }
   place-items: center;
 }
 .progress-ring {
+  position: relative;
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  border: 12px solid var(--blue-soft);
-  border-top-color: var(--blue);
   display: grid;
   place-items: center;
   color: var(--blue-dark);
   font-size: 1.3rem;
   font-weight: 700;
+}
+.progress-ring::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border: 12px solid var(--blue-soft);
+  border-top-color: var(--blue);
+  border-radius: 50%;
   animation: spin 1.4s linear infinite;
+}
+.progress-ring.complete {
+  color: var(--ok);
+}
+.progress-ring.complete::before {
+  border-color: var(--ok);
+  animation: none;
+}
+.diagnose-raw {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid var(--blue-line);
+  color: var(--blue-dark);
+}
+.diagnose-raw summary { cursor: pointer; font-weight: 600; }
+.diagnose-raw pre {
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .toast {
@@ -261,7 +293,8 @@ a { text-decoration: none; color: inherit; }
   align-items: stretch;
 }
 
-#ping-target {
+#ping-target,
+#traceroute-target {
   flex: 1;
   min-width: 0;
   height: 52px;
@@ -280,17 +313,20 @@ a { text-decoration: none; color: inherit; }
   transition: border-color .15s, box-shadow .15s;
 }
 
-#ping-target::placeholder {
+#ping-target::placeholder,
+#traceroute-target::placeholder {
   color: var(--muted);
   opacity: .7;
 }
 
-#ping-target:focus {
+#ping-target:focus,
+#traceroute-target:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(26, 90, 224, .12);
 }
 
-#ping-button {
+#ping-button,
+#traceroute-button {
   height: 52px;
   padding: 0 22px;
 
@@ -309,15 +345,18 @@ a { text-decoration: none; color: inherit; }
   transition: background .15s, transform .1s, box-shadow .15s;
 }
 
-#ping-button:hover {
+#ping-button:hover,
+#traceroute-button:hover:not(:disabled) {
   background: var(--blue-dark);
   border-color: var(--blue-dark);
   box-shadow: 0 4px 10px rgba(13, 42, 120, .15);
 }
 
-#ping-button:active {
+#ping-button:active,
+#traceroute-button:active {
   transform: scale(.98);
 }
+#traceroute-button:disabled { opacity: .65; cursor: wait; }
 
 #ping-result {
   min-height: 80px;
@@ -328,6 +367,26 @@ a { text-decoration: none; color: inherit; }
   border-radius: var(--radius);
 
   color: var(--text);
+}
+#traceroute-result {
+  min-height: 80px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 2px solid var(--blue-line);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+#traceroute-result p { margin: 0; color: var(--muted); }
+#traceroute-result h3 { margin: 0 0 10px; color: var(--blue-dark); font-size: 1.15rem; }
+.traceroute-hops { padding-left: 24px; line-height: 1.8; }
+.traceroute-output {
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 #ping-result p {
